@@ -29,8 +29,8 @@ s_t_pre = np.random.rand(hidden_size, 1)
 
 while curr_pos + seq_len + 1 < data_size:
     # x row char vector: seq_len
-    raw_x = all_data[curr_pos:curr_pos + seq_len]
-    raw_y = all_data[curr_pos + 1:curr_pos + seq_len + 1]
+    x = all_data[curr_pos:curr_pos + seq_len]
+    y = all_data[curr_pos + 1:curr_pos + seq_len + 1]
 
     x_all,y_p_all,s_all = {},{},{}
 
@@ -62,9 +62,23 @@ while curr_pos + seq_len + 1 < data_size:
 
     print("loss -> ", loss)
     # backprogate calculate
+
+    dV = np.zeros_like(V)
+    dW = np.zeros_like(W)
+    dU = np.zeros_like(U)
     t = 0
     for t in reversed(range(seq_len)):
-        pass
+        dV += (y_t - y_p_all[t])*s_all[t]
+        delta_t =  np.dot(V.T, y_t - y_p_all[t])*(1-np.square(s_all[t]))
+        for i in range(t):
+            dW += np.outer(delta_t, s_all[i-1])
+            dU[:, x_all[t]] += delta_t
+            delta_t = W.dot(delta_t)*(1-np.square(s_all[t-1]))
+
+
+    print("dV -> ", dV)
+    print("dW ->", dW)
+    print("dU ->", dU)
 
 
 
