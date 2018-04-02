@@ -2,7 +2,7 @@ import numpy as np
 
 sigmoid_f = lambda x_vec: 1 / (1 + np.exp(-x_vec))
 tanh_f = lambda x_vec: 2 * sigmoid_f(2 * x_vec) - 1
-softmax_f = lambda x_vec: np.exp(x_vec-np.max(x_vec)) / np.sum(np.exp(x_vec-np.max(x_vec)))
+softmax_f = lambda x_vec: np.exp(x_vec - np.max(x_vec)) / np.sum(np.exp(x_vec - np.max(x_vec)))
 
 # 根据当前输入字母，预测下一个字母
 words = "today is a good day, hello how are you fine thanks and you what's your name"
@@ -11,8 +11,8 @@ all_data = list(words)
 data_size = len(all_data)
 vocab = list(set(all_data))
 vocab_size = len(vocab)
-char_idx = {char: idx for idx,char in enumerate(vocab)}
-idx_char = {idx: char for idx,char in enumerate(vocab)}
+char_idx = {char: idx for idx, char in enumerate(vocab)}
+idx_char = {idx: char for idx, char in enumerate(vocab)}
 
 seq_len = 26
 hidden_size = 100
@@ -41,7 +41,7 @@ while epoch < 6:
         y = [char_idx[c] for c in raw_y]
 
         y_p_all = np.matrix(np.zeros([seq_len, vocab_size]))
-        s_all = np.matrix(np.zeros([seq_len+1, hidden_size]))
+        s_all = np.matrix(np.zeros([seq_len + 1, hidden_size]))
         s_all[-1] = s_t_pre.T
 
         # forward calculate
@@ -55,12 +55,12 @@ while epoch < 6:
             # hd_sz*1 = (hd_sz*vb_sz dot  vb_sz*1) + (hd_sz*hd_sz dot hd_sz*1)
             s_t = tanh_f(np.dot(U, x_t) + np.dot(W, s_t_pre))
             # vocab_size*1 = (vb_sz*hd_z dot hd_sz*1)
-            y_p_t = softmax_f(np.dot(V, s_all[t-1].T))
+            y_p_t = softmax_f(np.dot(V, s_all[t - 1].T))
             # just store all the mid values
             y_p_all[t] = y_p_t.T
             s_all[t] = s_t.T
 
-        loss = -np.sum(np.log(y_p_all[np.arange(len((y))), y]))/vocab_size
+        loss = -np.sum(np.log(y_p_all[np.arange(len((y))), y])) / vocab_size
         print("epoch : %d %d loss -> %f" % (epoch, curr_iter, loss))
         curr_iter += 1
 
@@ -75,27 +75,25 @@ while epoch < 6:
             y_t[y[t]] = [1]
             x_t[x[t]] = [1]
             s_t = np.asarray(s_all[t].T)
-            s_t_1 = np.asarray(s_all[t-1].T)
+            s_t_1 = np.asarray(s_all[t - 1].T)
             y_p_t = np.asarray(y_p_all[t].T)
             # 21*21
             delta_y_t = y_p_t - y_t
             # dv 21*100
-            dV += delta_y_t*s_t.T
+            dV += delta_y_t * s_t.T
             # V 21*100 delta_y 21*1     s_t 100*1 = 100*1
-            delta_t =  np.dot(V.T, delta_y_t)*(1-np.square(s_t))
+            delta_t = np.dot(V.T, delta_y_t) * (1 - np.square(s_t))
             for i in range(t):
                 s_i = np.asarray(s_all[i].T)
-                s_i_1 = np.asarray(s_all[i-1].T)
+                s_i_1 = np.asarray(s_all[i - 1].T)
                 # w 100*100 = 100*1 100*1
                 dW += np.dot(delta_t, s_i_1.T)
                 # U 100*21 100*1 21*1
-                dU += np.dot(delta_t,x_t.T)
+                dU += np.dot(delta_t, x_t.T)
                 # 100*1 = 100*100 100*1
-                delta_t = W.dot(delta_t)*(1-np.square(s_i_1))
+                delta_t = W.dot(delta_t) * (1 - np.square(s_i_1))
         curr_pos += 1
-        W -= learning_rate*dW
-        U -= learning_rate*dU
-        V -= learning_rate*dV
+        W -= learning_rate * dW
+        U -= learning_rate * dU
+        V -= learning_rate * dV
     epoch += 1
-
-
