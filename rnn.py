@@ -15,18 +15,14 @@ char_idx = {char: idx for idx, char in enumerate(vocab)}
 idx_char = {idx: char for idx, char in enumerate(vocab)}
 
 seq_len = 26
-hidden_size = 100
+hidden_size = 1000
 n = 0
 learning_rate = 0.0001
-
-U = np.random.rand(hidden_size, vocab_size)
-W = np.random.rand(hidden_size, hidden_size)
-V = np.random.rand(vocab_size, hidden_size)
-s_t_pre = np.random.rand(hidden_size, 1)
 
 U = np.random.uniform(-np.sqrt(1. / vocab_size), np.sqrt(1. / vocab_size), (hidden_size, vocab_size))
 W = np.random.uniform(-np.sqrt(1. / hidden_size), np.sqrt(1. / hidden_size), (hidden_size, hidden_size))
 V = np.random.uniform(-np.sqrt(1. / hidden_size), np.sqrt(1. / hidden_size), (vocab_size, hidden_size))
+s_t_pre = np.random.rand(hidden_size, 1)
 
 epoch = 0
 while epoch < 6:
@@ -97,3 +93,7 @@ while epoch < 6:
         U -= learning_rate * dU
         V -= learning_rate * dV
     epoch += 1
+print("U -> ", U)
+print("V -> ", V)
+print("W -> ", W)
+
