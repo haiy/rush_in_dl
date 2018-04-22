@@ -1,38 +1,100 @@
 import numpy as np
 
-
 sigmoid_f = lambda x_vec: 1 / (1 + np.exp(-x_vec))
 tanh_f = lambda x_vec: 2 * sigmoid_f(2 * x_vec) - 1
 softmax_f = lambda x_vec: np.exp(x_vec - np.max(x_vec)) / np.sum(np.exp(x_vec - np.max(x_vec)))
-
 
 words = "today is a good day, hello how are you fine thanks and you what's your name"
 
 all_data = list(words)
 data_size = len(all_data)
 vocab = list(set(all_data))
-vocab_size = len(vocab)
 char_idx = {char: idx for idx, char in enumerate(vocab)}
 idx_char = {idx: char for idx, char in enumerate(vocab)}
+train_data = [char_idx[w] for w in all_data]
 
-seq_len = 26
-hidden_size = 400
-n = 0
+seq_len = 26 # t len
+hidden_size = 500
+vocab_size = len(vocab)  # 21
+Z = vocab_size + hidden_size
+
+# hd_sz*(vocab_sz + hd_sz)
+W_i = np.random.random((hidden_size, Z)) / np.sqrt(Z / 2.0)
+W_f = np.random.random((hidden_size, Z)) / np.sqrt(Z / 2.0)
+W_o = np.random.random((hidden_size, Z)) / np.sqrt(Z / 2.0)
+W_cc = np.random.random((hidden_size, Z)) / np.sqrt(hidden_size / 2.0)
+
+# hd_sz * 1
+c_prev = np.zeros([hidden_size, 1])
+h_prev = np.zeros([hidden_size, 1])
+W_hy = np.random.random((vocab_size, hidden_size))
+
 learning_rate = 0.0001
+epoch = 0
+while epoch < 6:
+    pos = 0
+    while pos + 1 < len(train_data) :
+        loss = 0
+        temp_cache = {}
+        for t in range(seq_len):
+            x_t = np.zeros([vocab_size, 1])
+            x_t[train_data[pos]] = [1]
+            y_idx = train_data[pos + 1]
+            X = np.vstack([x_t, h_prev]) # (vocab_sz+hidden_size)*1
 
-rand_init = np.random.random
-W_xi = rand_init([vocab_size, hidden_size])
-W_hi = rand_init([hidden_size, hidden_size])
+            # hd_sz * 1
+            f_t = sigmoid_f(np.dot(W_f, X))
+            i_t = sigmoid_f(np.dot(W_i, X))
+            o_t = sigmoid_f(np.dot(W_o, X))
+            cc_t = tanh_f(np.dot(W_cc, X))
 
-W_xf = rand_init([vocab_size, hidden_size])
-W_hf = rand_init([hidden_size, hidden_size])
+            # hd_sz*1
+            c_t = np.multiply(f_t, c_prev) + np.multiply(i_t, cc_t)
+            c_prev = c_t
+            h_t = np.multiply(o_t, tanh_f(c_t))
 
-W_xo = rand_init([vocab_size, hidden_size])
-W_ho = rand_init([hidden_size, hidden_size])
+            y_t = np.dot(W_hy, h_t)  # vb_sz*hd_dz  hd_sz*1
+            prob = softmax_f(y_t)
+            loss += -np.sum(np.log(prob[y_idx])) / vocab_size
 
-W_xc = rand_init([vocab_size, hidden_size])
-W_hc = rand_init([hidden_size, hidden_size])
+            temp_cache[t] = (X, f_t, i_t, o_t, cc_t, c_t, h_t, y_t, prob, y_idx)
 
+        print("here %d loss %f->" % (pos, loss))
+        pos += 1
 
+        # backward
+        d_w_f = np.zeros_like(W_f)
+        d_w_i = np.zeros_like(W_i)
+        d_w_o = np.zeros_like(W_o)
+        d_w_cc = np.zeros_like(W_cc)
 
+        prev_dct = np.zeros((hidden_size, 1))
+        for t in reversed(range(seq_len)):
+            X_t, f_t, i_t, o_t, cc_t, c_t, h_t, y_t, prob, y_idx = temp_cache[t]
+            if t > 0:
+                X_t1, f_t1, i_t1, o_t1, cc_t1, c_t_1, h_t1, y_t1, prob1, y_idx1 = temp_cache[t - 1]
+            else:
+                break
+            y = np.zeros([vocab_size, 1])
+            y[y_idx] = [1]
+            dy = prob - y  # vb_sz * 1
+            d_w_hy = np.dot(dy, h_t.T)  # vb_sz*1 hd_sz*1  = vb_sz*hd_sz
+            dh_t = np.dot(dy.T, W_hy)  # # 1*vb_sz vb_sz*hd_sz = 1 * hdsz
+            do_t = np.multiply(dh_t, tanh_f(c_t))  # 1 * hd_sz  hd_sz*1 = hd_sz*hd_sz
+            # hd_sz * hd_sz  hd_sz*1 = hd_sz * 1
+            dc_t = np.dot(do_t, np.multiply(o_t, 1 - np.square(tanh_f(c_t)))) + prev_dct
+            prev_dct = dc_t
+            df_t = np.dot(c_t_1, dc_t.T)  # hd_sz * 1 hd_sz*1 = hd_sz*hd_sz
+            di_t = np.dot(cc_t, dc_t.T)
+            d_cc_t = np.dot(i_t, dc_t.T)
+            d_c_prev = np.dot(f_t, dc_t.T)
+            # hd_sz * (hd_sz + vb_sz) = hd_sz_sz*hd_sz hd_sz*1   (vocab_sz+hidden_size)*1
+            d_w_f += np.dot(df_t, f_t - np.square(f_t)).dot(X_t.T)
+            d_w_i += np.dot(di_t, i_t - np.square(i_t)).dot(X_t.T)
+            d_w_o += np.dot(do_t, o_t - np.square(o_t)).dot(X_t.T)
+            d_w_cc += np.dot(d_cc_t, 1 - np.square(tanh_f(cc_t))).dot(X_t.T)
 
+        W_f -= learning_rate*d_w_f
+        W_i -= learning_rate*d_w_i
+        W_o -= learning_rate*d_w_o
+        W_cc -= learning_rate*d_w_cc
