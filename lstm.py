@@ -13,7 +13,7 @@ char_idx = {char: idx for idx, char in enumerate(vocab)}
 idx_char = {idx: char for idx, char in enumerate(vocab)}
 train_data = [char_idx[w] for w in all_data]
 
-seq_len = 26 # t len
+seq_len = 26  # t len
 hidden_size = 1000
 vocab_size = len(vocab)  # 21
 Z = vocab_size + hidden_size
@@ -25,23 +25,25 @@ W_f = np.random.uniform(-np.sqrt(1. / vocab_size), np.sqrt(1. / Z), (hidden_size
 W_o = np.random.uniform(-np.sqrt(1. / vocab_size), np.sqrt(1. / Z), (hidden_size, Z))
 W_cc = np.random.uniform(-np.sqrt(1. / vocab_size), np.sqrt(1. / Z), (hidden_size, Z))
 
-# hd_sz * 1
-c_prev = np.random.uniform(-np.sqrt(1. / hidden_size), np.sqrt(1. / hidden_size), (hidden_size, 1))
-h_prev = np.random.uniform(-np.sqrt(1. / hidden_size), np.sqrt(1. / hidden_size), (hidden_size, 1))
 W_hy = np.random.uniform(-np.sqrt(1. / vocab_size), np.sqrt(1. / hidden_size), (vocab_size, hidden_size))
 
 learning_rate = 0.00001
 epoch = 0
 while epoch < 6:
     pos = 0
-    while pos + 1 < len(train_data) :
+
+    while pos + 1 < len(train_data):
         loss = 0
         temp_cache = {}
+        # hd_sz * 1
+        c_prev = np.random.uniform(-np.sqrt(1. / hidden_size), np.sqrt(1. / hidden_size), (hidden_size, 1))
+        h_prev = np.random.uniform(-np.sqrt(1. / hidden_size), np.sqrt(1. / hidden_size), (hidden_size, 1))
+        temp_cache[-1] = (0, 0, 0, 0, 0, c_prev, h_prev, 0, 0, 0)
         for t in range(seq_len):
             x_t = np.zeros([vocab_size, 1])
             x_t[train_data[pos]] = [1]
             y_idx = train_data[pos + 1]
-            X = np.vstack([x_t, h_prev]) # (vocab_sz+hidden_size)*1
+            X = np.vstack([x_t, temp_cache[t - 1][6]])  # (vocab_sz+hidden_size)*1
 
             # hd_sz * 1
             f_t = sigmoid_f(np.dot(W_f, X))
@@ -50,8 +52,7 @@ while epoch < 6:
             cc_t = tanh_f(np.dot(W_cc, X))
 
             # hd_sz*1
-            c_t = np.multiply(f_t, c_prev) + np.multiply(i_t, cc_t)
-            c_prev = c_t
+            c_t = np.multiply(f_t, temp_cache[t - 1][5]) + np.multiply(i_t, cc_t)
             h_t = np.multiply(o_t, tanh_f(c_t))
 
             y_t = np.dot(W_hy, h_t)  # vb_sz*hd_dz  hd_sz*1
@@ -72,10 +73,6 @@ while epoch < 6:
         prev_dct = np.zeros((hidden_size, 1), dtype=float)
         for t in reversed(range(seq_len)):
             X_t, f_t, i_t, o_t, cc_t, c_t, h_t, y_t, prob, y_idx = temp_cache[t]
-            if t > 0:
-                X_t1, f_t1, i_t1, o_t1, cc_t1, c_t_1, h_t1, y_t1, prob1, y_idx1 = temp_cache[t - 1]
-            else:
-                break
             y = np.zeros([vocab_size, 1])
             y[y_idx] = [1]
             dy = prob - y  # vb_sz * 1
@@ -85,7 +82,7 @@ while epoch < 6:
             # hd_sz * hd_sz  hd_sz*1 = hd_sz * 1
             dc_t = np.dot(do_t, np.multiply(o_t, 1 - np.square(tanh_f(c_t)))) + prev_dct
             prev_dct = dc_t
-            df_t = np.dot(c_t_1, dc_t.T)  # hd_sz * 1 hd_sz*1 = hd_sz*hd_sz
+            df_t = np.dot(temp_cache[t - 1][5], dc_t.T)  # hd_sz * 1 hd_sz*1 = hd_sz*hd_sz
             di_t = np.dot(cc_t, dc_t.T)
             d_cc_t = np.dot(i_t, dc_t.T)
             d_c_prev = np.dot(f_t, dc_t.T)
@@ -95,7 +92,7 @@ while epoch < 6:
             d_w_o += np.dot(do_t, o_t - np.square(o_t)).dot(X_t.T)
             d_w_cc += np.dot(d_cc_t, 1 - np.square(tanh_f(cc_t))).dot(X_t.T)
 
-        W_f -= learning_rate*d_w_f
-        W_i -= learning_rate*d_w_i
-        W_o -= learning_rate*d_w_o
-        W_cc -= learning_rate*d_w_cc
+        W_f -= learning_rate * d_w_f
+        W_i -= learning_rate * d_w_i
+        W_o -= learning_rate * d_w_o
+        W_cc -= learning_rate * d_w_cc
