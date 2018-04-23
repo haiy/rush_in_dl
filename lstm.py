@@ -14,22 +14,23 @@ idx_char = {idx: char for idx, char in enumerate(vocab)}
 train_data = [char_idx[w] for w in all_data]
 
 seq_len = 26 # t len
-hidden_size = 500
+hidden_size = 1000
 vocab_size = len(vocab)  # 21
 Z = vocab_size + hidden_size
 
 # hd_sz*(vocab_sz + hd_sz)
-W_i = np.random.random((hidden_size, Z)) / np.sqrt(Z / 2.0)
-W_f = np.random.random((hidden_size, Z)) / np.sqrt(Z / 2.0)
-W_o = np.random.random((hidden_size, Z)) / np.sqrt(Z / 2.0)
-W_cc = np.random.random((hidden_size, Z)) / np.sqrt(hidden_size / 2.0)
+
+W_i = np.random.uniform(-np.sqrt(1. / vocab_size), np.sqrt(1. / Z), (hidden_size, Z))
+W_f = np.random.uniform(-np.sqrt(1. / vocab_size), np.sqrt(1. / Z), (hidden_size, Z))
+W_o = np.random.uniform(-np.sqrt(1. / vocab_size), np.sqrt(1. / Z), (hidden_size, Z))
+W_cc = np.random.uniform(-np.sqrt(1. / vocab_size), np.sqrt(1. / Z), (hidden_size, Z))
 
 # hd_sz * 1
-c_prev = np.zeros([hidden_size, 1])
-h_prev = np.zeros([hidden_size, 1])
-W_hy = np.random.random((vocab_size, hidden_size))
+c_prev = np.random.uniform(-np.sqrt(1. / hidden_size), np.sqrt(1. / hidden_size), (hidden_size, 1))
+h_prev = np.random.uniform(-np.sqrt(1. / hidden_size), np.sqrt(1. / hidden_size), (hidden_size, 1))
+W_hy = np.random.uniform(-np.sqrt(1. / vocab_size), np.sqrt(1. / hidden_size), (vocab_size, hidden_size))
 
-learning_rate = 0.0001
+learning_rate = 0.00001
 epoch = 0
 while epoch < 6:
     pos = 0
@@ -63,12 +64,12 @@ while epoch < 6:
         pos += 1
 
         # backward
-        d_w_f = np.zeros_like(W_f)
-        d_w_i = np.zeros_like(W_i)
-        d_w_o = np.zeros_like(W_o)
-        d_w_cc = np.zeros_like(W_cc)
+        d_w_f = np.zeros_like(W_f, dtype=np.float)
+        d_w_i = np.zeros_like(W_i, dtype=np.float)
+        d_w_o = np.zeros_like(W_o, dtype=np.float)
+        d_w_cc = np.zeros_like(W_cc, dtype=np.float)
 
-        prev_dct = np.zeros((hidden_size, 1))
+        prev_dct = np.zeros((hidden_size, 1), dtype=float)
         for t in reversed(range(seq_len)):
             X_t, f_t, i_t, o_t, cc_t, c_t, h_t, y_t, prob, y_idx = temp_cache[t]
             if t > 0:
